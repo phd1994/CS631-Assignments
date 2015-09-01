@@ -1,0 +1,44 @@
+Q1.
+
+
+Q2.
+
+
+explain select * from student s1 where not exists (select * from student as s2 where s2.tot_cred > s1.tot_cred);
+
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Nested Loop Anti Join  (cost=0.00..39970.00 rows=1331 width=24)
+   Join Filter: (s2.tot_cred > s1.tot_cred)
+   ->  Seq Scan on student s1  (cost=0.00..34.97 rows=1997 width=24)
+   ->  Materialize  (cost=0.00..44.95 rows=1997 width=4)
+         ->  Seq Scan on student s2  (cost=0.00..34.97 rows=1997 width=4)
+
+Q3.
+
+explain select * from student as s1 where tot_cred=(select max(tot_cred) from student as s2 where s2.dept_name = s1.dept_name);
+
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Seq Scan on student s1  (cost=0.00..80364.29 rows=10 width=24)
+   Filter: (tot_cred = (SubPlan 1))
+   SubPlan 1
+     ->  Aggregate  (cost=40.21..40.22 rows=1 width=4)
+           ->  Seq Scan on student s2  (cost=0.00..39.96 rows=100 width=4)
+                 Filter: ((dept_name)::text = (s1.dept_name)::text)
+
+Q4.
+
+explain select *
+from student as s1 where exists (select * from (select dept_name,sum(tot_cred) from student as s2 group by dept_name) as d2 where d2.dept_name='Comp. Sci.')
+;
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Result  (cost=20.27..55.24 rows=1997 width=24)
+   One-Time Filter: $0
+   InitPlan 1 (returns $0)
+     ->  Subquery Scan on d2  (cost=0.00..40.54 rows=2 width=0)
+           ->  GroupAggregate  (cost=0.00..40.52 rows=2 width=13)
+                 ->  Seq Scan on student s2  (cost=0.00..39.96 rows=108 width=13)
+                       Filter: ((dept_name)::text = 'Comp. Sci.'::text)
+   ->  Seq Scan on student s1  (cost=0.00..34.97 rows=1997 width=24)
